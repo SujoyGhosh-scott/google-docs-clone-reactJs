@@ -1,7 +1,9 @@
+import TextEditor from "./TextEditor";
+
 function App() {
   return (
-    <div className="App">
-      <h1>hello</h1>
+    <div>
+      <TextEditor />
     </div>
   );
 }
