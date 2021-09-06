@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from "react";
 import Quill from "quill";
 import { io } from "socket.io-client";
 import "quill/dist/quill.snow.css";
+import { useParams } from "react-router-dom";
+
+const SAVE_INTERVAL_MS = 2000;
 
 const toolbar_options = [
   [{ header: [1, 2, 3, 4, 5, 6, false] }],
@@ -23,8 +26,10 @@ const toolbar_options = [
 ];
 
 export default function TextEditor() {
+  const { id: documentId } = useParams();
   const [socket, setSocket] = useState();
   const [quill, setQuill] = useState();
+
   useEffect(() => {
     const s = io("http://localhost:3001");
     setSocket(s);
@@ -33,6 +38,28 @@ export default function TextEditor() {
       s.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (socket == null || quill == null) return;
+
+    socket.once("load-document", (document) => {
+      quill.setContents(document);
+      quill.enable();
+    });
+
+    socket.emit("get-document", documentId);
+  }, [socket, quill, documentId]);
+
+  useEffect(() => {
+    if (socket == null || quill == null) return;
+    const interval = setInterval(() => {
+      socket.emit("save-document", quill.getContents());
+    }, SAVE_INTERVAL_MS);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [socket, quill]);
 
   useEffect(() => {
     if (socket == null || quill == null) return;
@@ -73,6 +100,8 @@ export default function TextEditor() {
         toolbar: toolbar_options,
       },
     });
+    q.disable(false);
+    q.setText("Loading...");
     setQuill(q);
   }, []);
 
